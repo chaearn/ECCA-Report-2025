@@ -7495,8 +7495,30 @@ figure {
   height: 100%;
   display: flex;
   position: absolute;
-  inset: 40% 0% 0%;
+  inset: 0% 0% 0%;
 }
+
+@media screen and (min-width: 768px) and (max-width: 1000px) {
+  .hero-bg {
+    align-items: flex-start;
+  }
+  
+}
+@media screen and (min-width: 1441px) {
+  .hero-bg {
+    inset: 40% 0% 0%;
+  }
+  
+}
+
+@media screen and (min-width: 1825px) {
+  .hero-bg {
+    inset: 60svh 0% 0%;
+  }
+  
+}
+
+
 
 .flexchild_align-stretch {
   align-self: stretch;
