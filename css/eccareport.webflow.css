@@ -4540,7 +4540,7 @@ figure {
 }
 
 .card_primary_element {
-  grid-column-gap: var(--_spacing---space--4);
+  /* grid-column-gap: var(--_spacing---space--4); */
   grid-row-gap: var(--_spacing---space--4);
   border-top-style: solid;
   border-top-width: var(--border-width--main);
@@ -4550,11 +4550,10 @@ figure {
   border-bottom-width: var(--border-width--main);
   border-left-style: solid;
   border-left-width: var(--border-width--main);
-  background-color: var(--_theme---background-2);
-  border-top-color: color-mix(in srgb, transparent calc(100% * var(--_trigger---on)), var(--_theme---text) calc(100% * var(--_trigger---off)));
-  border-right-color: color-mix(in srgb, transparent calc(100% * var(--_trigger---on)), var(--_theme---text) calc(100% * var(--_trigger---off)));
-  border-bottom-color: color-mix(in srgb, transparent calc(100% * var(--_trigger---on)), var(--_theme---text) calc(100% * var(--_trigger---off)));
-  border-left-color: color-mix(in srgb, transparent calc(100% * var(--_trigger---on)), var(--_theme---text) calc(100% * var(--_trigger---off)));
+  border-top-color: color-mix(in srgb, transparent calc(100% * var(--_trigger---on)), transparent calc(100% * var(--_trigger---off)));
+  border-right-color: color-mix(in srgb, transparent calc(100% * var(--_trigger---on)), transparent calc(100% * var(--_trigger---off)));
+  border-bottom-color: color-mix(in srgb, transparent calc(100% * var(--_trigger---on)), transparent calc(100% * var(--_trigger---off)));
+  border-left-color: color-mix(in srgb, transparent calc(100% * var(--_trigger---on)), transparent calc(100% * var(--_trigger---off)));
   border-radius: inherit;
   width: 100%;
   padding-top: calc(var(--_spacing---space--7) * max(var(--_responsive---large), var(--_responsive---medium))  + var(--_spacing---space--5) * max(var(--_responsive---small), var(--_responsive---xsmall)));
@@ -5752,6 +5751,24 @@ figure {
   align-items: flex-start;
   display: flex;
   position: relative;
+  max-width: 45ch;
+  text-wrap: balance;
+  clip-path: url(#text-box-svg);
+  background: var(--swatch--ocean-300);
+  & .card_primary_text {
+    padding: 4rem 8rem;
+  }
+}
+
+@container (width < 47em) {
+  .card_primary_content {
+    & .card_primary_text {
+      padding: 2rem 2rem;
+    }
+  }
+  .card_primary_header{
+    justify-content: center !important;
+  }
 }
 
 .card_primary_content:where(.w-variant-da648fa9-bbba-c8cb-e549-1d22cb8af97b) {
