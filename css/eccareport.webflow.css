@@ -8501,7 +8501,7 @@ figure {
 
   .image {
     transform-origin: 100%;
-    transform: translate(2.3rem, 31svw)scale(2);
+    transform: translate(2.3rem, 0)scale(2);
   }
 
   .hero-bg {
