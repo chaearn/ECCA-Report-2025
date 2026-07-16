@@ -6819,6 +6819,7 @@ figure {
   width: 100%;
   height: auto;
   position: relative;
+  transform-origin: center;
 }
 
 .content_section_map-wrap {
@@ -7733,6 +7734,7 @@ figure {
   z-index: -1;
   height: 110%;
   overflow: visible;
+  transform-origin: center;
 }
 
 .content_eyebrow {
@@ -8247,6 +8249,7 @@ figure {
     position: absolute;
     overflow: visible;
     transform: translate(-38px, -20px);
+    transform-origin: center;
   }
 
   .bubble.green {
@@ -8641,6 +8644,7 @@ figure {
   }
 
   .illus_img {
+    transform-origin: center;
     transform: rotateX(0)rotateY(-180deg)rotateZ(0);
   }
 
