@@ -6851,7 +6851,7 @@ figure {
     flex-wrap: wrap;
     align-items: flex-end;
     justify-content: flex-end;
-    margin-inline: auto;
+    /* margin-inline: auto; */
     & > img {
       width: 10rem !important;
     }
@@ -7307,6 +7307,11 @@ figure {
 .overview-line_svg {
   position: absolute;
   transform: translate(-2rem, -1.4rem);
+}
+
+.illus_wrap {
+  width: 70%;
+  margin-top: 15rem;
 }
 
 .partnership-survey_layout {
