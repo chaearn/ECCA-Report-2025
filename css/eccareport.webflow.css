@@ -5938,7 +5938,7 @@ figure {
   order: 1;
   grid-column: 11 / -1;
   align-items: center;
-  height: 100svh;
+  height: 100vh;
   max-height: none;
   margin-top: auto;
   margin-bottom: auto;
