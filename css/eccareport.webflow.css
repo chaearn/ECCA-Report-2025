@@ -5945,6 +5945,7 @@ figure {
   display: flex;
   position: fixed;
   inset: 0% 0% 0% auto;
+  -webkit-mask-image: -webkit-gradient(linear, right top, right bottom, color-stop(0.00, rgba(0, 0, 0, 0)), color-stop(0.15, rgba(0, 0, 0, 1)), color-stop(0.50, rgba(0, 0, 0, 1)), color-stop(0.85, rgba(0, 0, 0, 1)), color-stop(1.00, rgba(0, 0, 0, 0)));
 }
 
 .button_main_line {
