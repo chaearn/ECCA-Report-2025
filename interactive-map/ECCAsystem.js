@@ -2758,7 +2758,11 @@ async function _2(FileAttachment,d3)
   const headerInner = headerBlob.append("div").attr("class", "ecca-header-inner");
 
   // Bottom-left link to the full annual-report page.
-  const REPORT_URL = "https://chaearn.github.io/ECCA-Report-2025/";
+  // Relative ("../") so it works wherever this is hosted: the map lives at
+  // <site>/interactive-map/ and the report is one level up at <site>/ —
+  // works on Netlify now and under eccafamily.foundation/report-2025/ later,
+  // without hardcoding a domain.
+  const REPORT_URL = "../";
   const reportLink = d3.create("a").attr("class", "ecca-report ecca-chrome")
     .attr("href", REPORT_URL).attr("target", "_blank").attr("rel", "noopener noreferrer")
     .html(`📄 Read ECCA Annual Report 2025 →`);

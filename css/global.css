@@ -597,6 +597,23 @@ textarea:focus-visible {
   .story_modal_paper .content_p-text {
     padding-left: 0 !important;
   }
+
+  /* Opt-out hook: drop an element's inline sizing/layout on the narrow modal so
+     a block that was constrained for the desktop columns (fixed width, capped
+     height, flex centering) instead flows full-width in the reading column.
+     Add class="... u-mobile-unstyle" to any such element. !important is
+     required because the constraints are authored as inline styles. */
+  .story_modal_paper .u-mobile-unstyle {
+    /* display: block !important; */
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: none !important;
+    padding-left: unset !important;
+  }
+
+  .u-mobile-unstyle#roomtofill-img{
+    max-height: 12em !important;
+  }
 }
 .story_modal_paper:focus {
   outline: none;
