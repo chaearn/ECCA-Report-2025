@@ -6975,6 +6975,7 @@ figure {
     transform: scale(0.7);
     transform-origin: 40% 10%;
     padding-top: 4rem;
+    max-height: 55em;
   }
 }
 @container (width < 30em) {
