@@ -567,21 +567,35 @@ textarea:focus-visible {
    (0,2,0) and would outrank a bare `> *` at (0,1,0). Matching its specificity
    and coming later in the file is what lets 100% win. */
 @container story-paper (width < 42em) {
-  .modal-content {
-    flex-direction: column;
+  /* Collapse the desktop two-column magazine layout into one reading column.
+     Each story is built from several .modal-content blocks, each a two-column
+     flex row, so paragraphs and images are split across columns for the wide
+     layout — which reads out of order once stacked. display:contents dissolves
+     the .modal-content and .content_wrap wrapper boxes so ALL their children
+     become direct flex items of .story_modal_paper, in one shared flow. That is
+     what lets `order` (below) resequence the whole story across the old column
+     and block boundaries. */
+  .modal-content,
+  .modal-content .content_wrap {
+    display: contents;
   }
-  .modal-content > *,
-  .modal-content > [data-col] {
+
+  /* Reading order on mobile. Add data-readorder="N" to any block to place it;
+     items without one keep source order (order:0) and sit before the numbered
+     ones. `order` only works because the wrappers above were flattened, so
+     everything is a sibling in the same flex container. */
+  [data-readorder="1"]{order:1}[data-readorder="2"]{order:2}[data-readorder="3"]{order:3}[data-readorder="4"]{order:4}[data-readorder="5"]{order:5}[data-readorder="6"]{order:6}[data-readorder="7"]{order:7}[data-readorder="8"]{order:8}[data-readorder="9"]{order:9}[data-readorder="10"]{order:10}[data-readorder="11"]{order:11}[data-readorder="12"]{order:12}[data-readorder="13"]{order:13}[data-readorder="14"]{order:14}[data-readorder="15"]{order:15}[data-readorder="16"]{order:16}[data-readorder="17"]{order:17}[data-readorder="18"]{order:18}[data-readorder="19"]{order:19}[data-readorder="20"]{order:20}[data-readorder="21"]{order:21}[data-readorder="22"]{order:22}[data-readorder="23"]{order:23}[data-readorder="24"]{order:24}[data-readorder="25"]{order:25}[data-readorder="26"]{order:26}[data-readorder="27"]{order:27}[data-readorder="28"]{order:28}[data-readorder="29"]{order:29}[data-readorder="30"]{order:30}[data-readorder="31"]{order:31}[data-readorder="32"]{order:32}[data-readorder="33"]{order:33}[data-readorder="34"]{order:34}[data-readorder="35"]{order:35}[data-readorder="36"]{order:36}[data-readorder="37"]{order:37}[data-readorder="38"]{order:38}[data-readorder="39"]{order:39}[data-readorder="40"]{order:40}[data-readorder="41"]{order:41}[data-readorder="42"]{order:42}[data-readorder="43"]{order:43}[data-readorder="44"]{order:44}[data-readorder="45"]{order:45}[data-readorder="46"]{order:46}[data-readorder="47"]{order:47}[data-readorder="48"]{order:48}[data-readorder="49"]{order:49}[data-readorder="50"]{order:50}[data-readorder="51"]{order:51}[data-readorder="52"]{order:52}[data-readorder="53"]{order:53}[data-readorder="54"]{order:54}[data-readorder="55"]{order:55}[data-readorder="56"]{order:56}[data-readorder="57"]{order:57}[data-readorder="58"]{order:58}[data-readorder="59"]{order:59}[data-readorder="60"]{order:60}
+
+  /* Media goes full width; the desktop left indent and any bleed transform are
+     dropped so stacked paragraphs and images sit flush in the reading column. */
+  .story_modal_paper .content-image {
     width: 100% !important;
-  }
-  .modal-content p { 
-    padding-left: 0 !important;
-  }
-  .modal-content .content-image {
-    margin-block: 1rem !important;
-  }
-  .modal-content > div {
     max-width: 100% !important;
+    margin-block: 1rem !important;
+    transform: none !important;
+  }
+  .story_modal_paper .content_p-text {
+    padding-left: 0 !important;
   }
 }
 .story_modal_paper:focus {
@@ -731,6 +745,29 @@ textarea:focus-visible {
     overflow: hidden;
   }
 
+  /* Soft edges, shared by the master map and the four entry maps.
+
+     Feather the viewport edges so a zoomed, clipped map dissolves into the
+     section background instead of ending on a hard rectangle. The mask sits on
+     the wrapper (which never transforms — the container inside it does), so the
+     fade stays pinned to the frame at every zoom level. Two gradients,
+     horizontal and vertical, intersected so all four edges and the corners ramp
+     to transparent. Masks are render-only, so hotspot clicks near the edges are
+     unaffected. -webkit-mask-composite: source-in is the legacy Safari spelling
+     of `intersect`; the standard property follows and wins where supported. */
+  .mastermap_wrap.zoomViewport,
+  .entrymap_wrap.zoomViewport {
+    --zoom-fade: 1.5rem;
+    -webkit-mask-image:
+      linear-gradient(to right,  transparent, #000 var(--zoom-fade), #000 calc(100% - var(--zoom-fade)), transparent),
+      linear-gradient(to bottom, transparent, #000 var(--zoom-fade), #000 calc(100% - var(--zoom-fade)), transparent);
+    -webkit-mask-composite: source-in;
+    mask-image:
+      linear-gradient(to right,  transparent, #000 var(--zoom-fade), #000 calc(100% - var(--zoom-fade)), transparent),
+      linear-gradient(to bottom, transparent, #000 var(--zoom-fade), #000 calc(100% - var(--zoom-fade)), transparent);
+    mask-composite: intersect;
+  }
+
   /* Zoomooz supplies position:relative itself; this just makes the container
      fill the viewport so the hotspot percentages resolve against the map. */
   .mastermap_wrap .zoomContainer {
@@ -781,5 +818,100 @@ textarea:focus-visible {
   }
   .mastermap_wrap .mastermap_hotspot.is-inclusive {
     left: 42%; top: 51%; width: 44%; height: 39%;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Entry map click-to-magnify (Zoomooz)
+
+   The four per-cluster maps (Map-A..D, inside .entry_a) use the same Zoomooz
+   viewport/container mechanic as the master map, but with click-anywhere
+   magnify instead of fixed hotspots: clicking zooms toward the pointer, and
+   clicking again zooms back out (driven from JS — see the init script).
+
+   Scoped under .entrymap_wrap because .mastermap_img is shared with these maps
+   and must not be restyled globally. Desktop-only (>=992px) to match the master
+   map; below that the Webflow rules give .entry_a a fixed height / transform
+   that would fight the zoom, so the maps stay static there.
+
+   .entrymap_target is the invisible box Zoomooz zooms to; JS moves and sizes it
+   under the click before each zoom, so it is never interactive itself.
+   --------------------------------------------------------------------------- */
+.entrymap_wrap .mastermap_img {
+  z-index: auto;
+  display: block;
+}
+
+.entrymap_wrap .entrymap_target {
+  display: none;
+  position: absolute;
+  pointer-events: none;
+}
+
+@media screen and (min-width: 992px) {
+  .entrymap_wrap.zoomViewport {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+  }
+
+  .entrymap_wrap .zoomContainer {
+    width: 100%;
+  }
+
+  /* At rest the lens (below) stands in for the pointer, so the native cursor is
+     hidden over the map. Once magnified the map is draggable, so it becomes a
+     grab / grabbing cursor (a click without a drag still zooms back out). The
+     zoom-in fallback covers the moment before JS wires the lens up. */
+  .entrymap_wrap .entrymap_zoom {
+    cursor: zoom-in;
+  }
+
+  .entrymap_wrap.is-lens-ready:not(.is-zoomed) .entrymap_zoom {
+    cursor: none;
+  }
+
+  .entrymap_wrap.is-zoomed .entrymap_zoom {
+    cursor: grab;
+  }
+
+  .entrymap_wrap.is-panning .entrymap_zoom {
+    cursor: grabbing;
+  }
+
+  .entrymap_wrap .entrymap_target {
+    display: block;
+  }
+
+  /* Show state (desktop only). is-lens-visible is added by JS, which never runs
+     on mobile — but keeping the reveal here as well makes the gating explicit. */
+  .entrymap_wrap.is-lens-visible:not(.is-zoomed) .entrymap_lens {
+    opacity: 1;
+  }
+}
+
+/* Lens base styles, unconditional so the disc is inert and invisible until JS
+   reveals it — on mobile it stays opacity:0 / pointer-events:none rather than
+   falling back to element defaults. It's a soft ring that trails the pointer,
+   sized by JS to the exact patch of map a click will magnify; the visual echoes
+   the master map's hover ring, with an outer dark shadow for legibility over
+   the maps' pale areas. */
+.entrymap_wrap .entrymap_lens {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 50%;
+  background: #ffffff26;
+  box-shadow: 0 0 0 2px #ffffffcc, 0 6px 18px #00000030;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .15s ease;
+  z-index: 2;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .entrymap_wrap .entrymap_lens {
+    transition: none;
   }
 }

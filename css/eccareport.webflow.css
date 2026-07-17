@@ -1871,26 +1871,32 @@ figure {
 
 .u-svg:where(.w-variant-1c3f028b-116e-d4eb-db7f-8484491bbf2e) {
   transform: rotate(-180deg);
+  transform-origin: center;
 }
 
 .u-svg:where(.w-variant-a0a4b133-f837-5340-6c98-04b1518f150d) {
   transform: rotate(-90deg);
+  transform-origin: center;
 }
 
 .u-svg:where(.w-variant-5939aeba-b378-ecdc-f1bc-b6970df2be03) {
   transform: rotate(90deg);
+  transform-origin: center;
 }
 
 .u-svg:where(.w-variant-dc469724-71a3-14e1-b5d5-1294323411ce) {
   transform: rotate(-180deg);
+  transform-origin: center;
 }
 
 .u-svg:where(.w-variant-b18a0fcd-abb0-329e-47f4-79155dd8284a) {
   transform: rotate(-90deg);
+  transform-origin: center;
 }
 
 .u-svg:where(.w-variant-caa8b8e9-e8ec-6eb3-4526-30f19f7326f5) {
   transform: rotate(90deg);
+  transform-origin: center;
 }
 
 .u-icon {
@@ -4506,7 +4512,7 @@ figure {
   flex-flow: wrap;
   place-content: center space-between;
   align-items: center;
-  display: none;
+  display: flex;
 }
 
 .slider_button_layout {
