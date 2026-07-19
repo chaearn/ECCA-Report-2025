@@ -451,6 +451,16 @@ textarea:focus-visible {
 /* Torn sheet behind the hero title. Filled with the section's own background
    token, so it reads as the page itself tearing over the hero artwork rather
    than as a card sitting on top of it. */
+/* .u-container.hero right-aligns its children (align-items: flex-end), and the
+   hero_paper below is width: fit-content — so on a narrow viewport the title's
+   unwrapped width can push .header_wrap wider than the container, and the excess
+   spills off the LEFT edge (dragging the title and the button to ~0). Capping it
+   at the container width keeps the block on-screen; desktop already fits, so this
+   only takes effect when space is tight. */
+.header_wrap.hero {
+  max-width: 100%;
+}
+
 .hero_paper {
   --deckle-bg: var(--swatch--light-100);
   --hero-paper-pad-x: 0.75rem;
@@ -857,6 +867,18 @@ textarea:focus-visible {
 .entrymap_wrap .mastermap_img {
   z-index: auto;
   display: block;
+  /* The map is dragged to pan, so stop the browser's native image drag (the
+     ghost-image grab) and text/image selection from firing during a pan.
+     -webkit-user-drag covers Chrome/Safari; the dragstart guard in JS covers
+     the rest. */
+  -webkit-user-drag: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.entrymap_wrap .entrymap_zoom {
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .entrymap_wrap .entrymap_target {
