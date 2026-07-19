@@ -461,6 +461,75 @@ textarea:focus-visible {
   max-width: 100%;
 }
 
+/* .hero-bg's img carries width/height="5760"/"4502" attributes purely to give
+   the browser a paint-time aspect ratio and stop the hero flashing/reflowing
+   before the artwork loads. That trick relies on the img stretching to fit
+   its box like it would with no attributes at all — but .hero-bg
+   (eccareport.webflow.css) is `display: flex; align-items: flex-start`, and
+   width/height attributes are only *presentational hints*, equivalent to
+   inline width/height styles. On the flex main axis (width) the item still
+   shrinks to fit the container, but align-items: flex-start does not stretch
+   the cross axis (height), so the img was rendering at its raw attribute
+   height — 4502px — regardless of viewport width. That inflated box then got
+   `object-fit: cover`, zooming into a sliver of the artwork, and on mobile
+   (.hero-bg goes position: static below 480px) the 4502px tall box shoved the
+   whole hero content off the first screen.
+
+   Setting height: auto here overrides the presentational hint with a real
+   CSS declaration (which always wins), while width/height still supply the
+   img's intrinsic aspect-ratio (5760/4502) to the layout engine. So height is
+   still derived from the rendered width — same numbers you'd get from the
+   image's natural dimensions — and the CLS reservation the attributes exist
+   for keeps working exactly as intended. */
+.hero-bg img {
+  height: auto;
+}
+
+/* The hero h1 (.u-text-style-h2) picks up text-wrap: balance from Webflow's
+   design-token system (eccareport.webflow.css) via
+   text-wrap: var(--_text-style---text-wrap), with the token itself set to
+   `balance` on both the bare `h1` selector and `.u-text-style-h2`. `balance`
+   evens out the line lengths within a *fixed* box width — it never shrinks
+   the box to match. The h1's own width comes from `max-width` sizing the box
+   to its longest natural line, so once balance reflows the text into shorter,
+   even lines, that box is left far wider than any line actually drawn inside
+   it. .hero_paper is `width: fit-content` and hugs the h1's box, not its
+   text, so the dead space becomes visible as slack paper hanging off the
+   right edge of the torn-sheet background — worst at 1024px (123px of empty
+   paper), gone by 1200px where the h1 fits on one line anyway.
+
+   `text-wrap: pretty` fixes this: it still avoids orphans/ugly last lines,
+   but it doesn't force lines toward equal length, so it wraps closer to the
+   box's actual max-width and leaves far less slack for fit-content to
+   inherit. Overriding the `--_text-style---text-wrap` custom property
+   (rather than setting `text-wrap` directly) keeps the change flowing
+   through the design system's own `text-wrap: var(--_text-style---text-wrap)`
+   declaration instead of fighting it — `.hero_paper h1` (0,1,1) still beats
+   `.u-text-style-h2` (0,1,0) on specificity, so the override applies
+   reliably. Confirmed via getComputedStyle(h1).textWrap === "pretty" after
+   this rule, so no direct-property fallback is needed.
+
+   The measure itself is then nudged from 14ch to 14.2ch. Webflow sizes this
+   heading with `max-width: calc(var(--number) * 1ch)`, where --number comes
+   from the `data-number="14"` attribute on the h1. Measured against the real
+   font, "It's a Living System." needs ~0.7px more than 14ch leaves once
+   .hero_paper's -0.75rem margin-left is taken off the shrink-to-fit result —
+   so the tagline just misses fitting on one line and drops a third line with
+   "System." stranded on its own. 14.2ch clears that gap with a few px to
+   spare and restores the intended two-line break. `ch` scales with font-size,
+   so this is a ratio, not a magic pixel value: it holds at every width the
+   fluid type scale produces (verified 320/634/1024/1920).
+
+   This is set here rather than by editing the attribute to data-number="14.2"
+   because --number is not read from the attribute — global.css:146-155 is an
+   exact-match lookup table covering integers only, so a fractional attribute
+   would match nothing, leave --number unset, and collapse max-width to `none`
+   (measured: 189px of slack paper, far worse than the bug being fixed). */
+.hero_paper h1 {
+  --_text-style---text-wrap: pretty;
+  --number: 14.2;
+}
+
 .hero_paper {
   --deckle-bg: var(--swatch--light-100);
   --hero-paper-pad-x: 0.75rem;
