@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="description" content="An interactive map of the partner projects ECCA Family Foundation supports across oceans, landscapes, communities and cultural narratives.">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ECCAsystem</title>
+<link rel="stylesheet" type="text/css" href="./inspector.css">
+
+<link rel="preconnect" href="https://use.typekit.net">
+<link rel="preconnect" href="https://p.typekit.net" crossorigin>
+
+<!-- Adobe Fonts (Typekit): provides "gelica" (display serif for the header/
+     explore headings) and "poppins". -->
+<link rel="stylesheet" href="https://use.typekit.net/syg3laf.css">
+
+<link rel="preload" as="image" href="./files/a4dad551a2adddb442a460136730dee1d78031e8592b08f7073a4920b87c848cf9d12dfc0db7efdd8efd13fd4abe73d3520fe7187293b6cdc0a6baff8b0fd368.png">
+<link rel="preload" as="image" href="./files/7191241aa5c27144c921c85b7423715d8bdf1447965d62d20588d2d3549f43de47f02c9568c0f6ae12bc092c1336f886d9a6f4ebb4d17fde455110f83b44bd6e.png">
+<link rel="preload" as="image" href="./files/669813c32961b8dbe05210c732c0afb325e4912d5a91739a6cb315b3e9be053fd1c41313260eafd3c912439827b984aac5350da4f0338948cbff90279944c513.png">
+<link rel="preload" as="image" href="./files/31b81a3dccddc4fa8502d7832655315ae923db3905eea06e716febc50d8903292422e2013bab43cdf47ec16e914b0ad800eacf56ded5dee1297d933bb6583551.png">
+
+<link rel="preload" as="image" href="./files/686dbab0cb97e7a055a2a16a2a66e009780de57f1386ab7d9ee6abdd75aee055a55a9a30d728d358c82ebbcfa128d6a74762373904e070ca553b4742070765be.svg">
+<link rel="preload" as="image" href="./files/3433e3263c31b11c3a5e1e66f95e132da60332c24c695415390f6f0e7e4145f03d434d63d34be0a66dcc2079bbbfe2d0fa5174a1ec72afcce8cabbfa68c34fb3.svg">
+<link rel="preload" as="image" href="./files/c844eb6f66527f62cc17b06b002b384289b1ca8666cf58e3654beb7901789db14bd2110e93f45066cc4b87f317cec73b03e4f5ecfa618b77bc7d887a61f46ed2.svg">
+<link rel="preload" as="image" href="./files/eac0c2831435ae2837b28ad11bc75ca79f07e3a6279e73b3f5b96471030ad325bf462b3c147a095bcb2e5908c6a35ef3e8cd66e83129466d88a5e6cf135db98d.svg">
+
+<link rel="preload" as="font" type="font/ttf" crossorigin href="./files/f4a0bc9bc707cb1e11d0eb97ab62a66a14f2f2aa320e356c66186ebeba1b6ee6448b341c3de9dceed953aec3c4e0db819ad8c5b8f532fff71811f5ca51b2f7d6.ttf">
+
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; background: #F2F1ED; }
+  /* Root font-size drives every rem-based measurement in the info cards
+     (see cardHTML in ECCAsystem.js) — smaller here means the whole card
+     (padding, text, gaps) scales down together on a small screen instead
+     of staying at desktop size and wrapping into a cramped column. */
+  html { font-size: 16px; }
+  /* The diagram is drawn entirely in JS, so the served HTML carried no text
+     at all — nothing for a screen reader to read before the runtime finishes,
+     and nothing for a crawler that does not execute scripts. #ecca-text is the
+     same data the diagram renders, as markup. Clipped rather than
+     display:none so assistive tech still reaches it. */
+  #ecca-text { position:absolute; width:1px; height:1px; overflow:hidden;
+               clip:rect(0 0 0 0); clip-path:inset(50%); white-space:nowrap; }
+  @media (max-width: 480px) {
+    html { font-size: 10px; }
+  }
+</style>
+
+<body>
+<div id="ecca-text"><h1>The ECCAsystem</h1><p>An interactive map of the 34 partner projects ECCA Family Foundation supports across four clusters: Healthy Oceans, Regenerative Landscapes, Inclusive Communities and Cultural Narratives. The map below needs JavaScript; the same information is listed here.</p><p>Shared hub: Nature Alliance (Thailand).</p><section><h2>Regenerative Landscapes</h2><p>5 partner projects.</p><ul><li><strong>Sangsuree Power</strong> — Tara Climate Foundation. Thailand. Stage: Pilot. Areas of work: Frontline &amp; Communities; Markets &amp; Finance.</li><li><strong>FLF349 - Forest Restoration through Agroecology</strong> — World Wide Fund for Nature. Thailand. Stage: Build. Areas of work: Frontline &amp; Communities; Network &amp; Policy.</li><li><strong>Pai Regenerative Network</strong> — Pai Seedlings. Thailand. Stage: Validate. Areas of work: Frontline &amp; Communities; Markets &amp; Finance.</li><li><strong>Mangroves, Forests, Climate and Livelihoods Program</strong> — Landesa. Thailand. Stage: Build. Areas of work: Frontline &amp; Communities; Science &amp; Evidence; Network &amp; Policy.</li><li><strong>Grow CF</strong> — RECOFTC. Thailand. Stage: Build. Areas of work: Frontline &amp; Communities; Science &amp; Evidence; Network &amp; Policy.</li></ul><p>Connections in this cluster:</p><ul><li>Grow CF and Mangroves, Forests, Climate and Livelihoods Program: Win-Win Partnership.</li><li>Pai Regenerative Network and Navigating Emotions (in Inclusive Communities): Learning Journey.</li><li>30x30 Thailand Coalition and Grow CF (in Healthy Oceans): Partner with.</li><li>30x30 Thailand Coalition and Mangroves, Forests, Climate and Livelihoods Program (in Healthy Oceans): Partner with.</li><li>30x30 Thailand Coalition and FLF349 - Forest Restoration through Agroecology (in Healthy Oceans): Partner with.</li><li>Grow CF and Nature Alliance (Thailand): Invested for.</li><li>FLF349 - Forest Restoration through Agroecology and Nature Alliance (Thailand): Invested for.</li></ul></section><section><h2>Cultural Narratives</h2><p>10 partner projects.</p><ul><li><strong>Inspiring Asia Micro Film Festival Thailand</strong> — Bangkok Documentary Club. Thailand. Stage: Scale. Areas of work: Frontline &amp; Communities.</li><li><strong>Healing Arts Singapore</strong> — CULTURERUNNERS. Singapore. Stage: Scale. Areas of work: Frontline &amp; Communities; Science &amp; Evidence; Network &amp; Policy.</li><li><strong>Scholarships; ECCA-DMJX Photojournalism Award</strong> — DMJX. Denmark. Stage: Validate. Areas of work: Frontline &amp; Communities.</li><li><strong>Community Theatre for Social Change</strong> — Gab Fai. Thailand. Stage: Build. Areas of work: Frontline &amp; Communities.</li><li><strong>Bangkok Climate Action Week</strong> — JUTI. Thailand. Stage: Pilot. Areas of work: Frontline &amp; Communities; Network &amp; Policy.</li><li><strong>Bangkok 1899</strong> — Creative Migration. Thailand. Stage: Build. Areas of work: Frontline &amp; Communities; Network &amp; Policy.</li><li><strong>Nature x People</strong> — Love Frankie. Thailand. Stage: Pilot. Areas of work: Frontline &amp; Communities.</li><li><strong>Ghost 2568</strong> — Bangkok CityCity Gallery. Thailand. Stage: Build. Areas of work: Frontline &amp; Communities.</li><li><strong>Arts and Mental Health</strong> — Nationalt Center for Kunst og Mental Sundhed (CKMS). Denmark. Stage: Scale. Areas of work: Frontline &amp; Communities; Science &amp; Evidence; Network &amp; Policy.</li><li><strong>Arts-based Youth Development</strong> — Turning Tables Denmark. Denmark. Stage: Scale. Areas of work: Frontline &amp; Communities.</li></ul><p>Connections in this cluster:</p><ul><li>Arts and Mental Health and Arts-based Youth Development: Featured on WHO policy brief.</li><li>Bangkok Climate Action Week and Nature Alliance (Thailand): Invested for.</li></ul></section><section><h2>Healthy Oceans</h2><p>11 partner projects.</p><ul><li><strong>30x30 SEA Ocean Fund</strong> — Asia Community Foundation. Singapore. Stage: Pilot. Areas of work: Frontline &amp; Communities; Network &amp; Policy.</li><li><strong>Net Free Seas</strong> — Environmental Justice Foundation. Thailand. Stage: Build. Areas of work: Frontline &amp; Communities; Markets &amp; Finance; Network &amp; Policy.</li><li><strong>Sea Guardians</strong> — Thai Sea Watch Association. Thailand. Stage: Validate. Areas of work: Frontline &amp; Communities; Science &amp; Evidence; Network &amp; Policy.</li><li><strong>Precious Plastic</strong> — Green World Foundation. Thailand. Stage: Build. Areas of work: Frontline &amp; Communities.</li><li><strong>30x30 Thailand Coalition</strong> — Love Wildlife Foundation. Thailand. Stage: Pilot. Areas of work: Network &amp; Policy.</li><li><strong>Mapping Connectivity of Coral Reefs</strong> — ATMEC. Thailand. Stage: Validate. Areas of work: Science &amp; Evidence; Network &amp; Policy.</li><li><strong>Coral Conservation &amp; Marine Science</strong> — CORESea. Thailand. Stage: Validate. Areas of work: Science &amp; Evidence.</li><li><strong>Circular Economy Technology</strong> — Micro Greentech. Thailand. Stage: Pilot. Areas of work: Markets &amp; Finance.</li><li><strong>Ocean Fund I-B</strong> — Circulate Capital. Singapore. Stage: Scale. Areas of work: Markets &amp; Finance; Network &amp; Policy.</li><li><strong>Ocean plastic recovery &amp; finance</strong> — Seven Clean Seas. Thailand, Singapore, Indonesia. Stage: Build. Areas of work: Markets &amp; Finance; Frontline &amp; Communities; Network &amp; Policy.</li><li><strong>Seaweed-based biomaterial</strong> — Nano Onions. Thailand. Stage: Pilot. Areas of work: Markets &amp; Finance.</li></ul><p>Connections in this cluster:</p><ul><li>Mapping Connectivity of Coral Reefs and Coral Conservation &amp; Marine Science: Collaborating on Coral Connectivity Project.</li><li>Circular Economy Technology and Seaweed-based biomaterial: Incubated from ECCA-funded project – The Incubation Network.</li><li>30x30 Thailand Coalition and Precious Plastic: Partner with.</li><li>30x30 Thailand Coalition and Sea Guardians: Partner with.</li><li>30x30 Thailand Coalition and Net Free Seas: Partner with.</li><li>30x30 Thailand Coalition and Grow CF (in Regenerative Landscapes): Partner with.</li><li>30x30 Thailand Coalition and Mangroves, Forests, Climate and Livelihoods Program (in Regenerative Landscapes): Partner with.</li><li>30x30 Thailand Coalition and FLF349 - Forest Restoration through Agroecology (in Regenerative Landscapes): Partner with.</li><li>30x30 Thailand Coalition and Nature Alliance (Thailand): Invested for.</li></ul></section><section><h2>Inclusive Communities</h2><p>8 partner projects.</p><ul><li><strong>Navigating Emotions</strong> — Bettr Lives. Singapore. Stage: Validate. Areas of work: Frontline &amp; Communities.</li><li><strong>Digital Skills &amp; Youth Agency</strong> — Kita. Singapore. Stage: Pilot. Areas of work: Frontline &amp; Communities.</li><li><strong>Undifferent</strong> — Trampolene. Singapore. Stage: Validate. Areas of work: Frontline &amp; Communities; Markets &amp; Finance.</li><li><strong>Grassroots Protection Network</strong> — The Freedom Story. Thailand. Stage: Build. Areas of work: Frontline &amp; Communities.</li><li><strong>Border Health</strong> — Mae Tao Clinic. Thailand. Stage: Build. Areas of work: Frontline &amp; Communities; Network &amp; Policy.</li><li><strong>Gang i Gaden</strong> — Settlementet Vesterbro. Denmark. Stage: Build. Areas of work: Frontline &amp; Communities; Network &amp; Policy.</li><li><strong>Refugee and Migrant Employment</strong> — Issa Solutions. Thailand. Stage: Pilot. Areas of work: Frontline &amp; Communities; Markets &amp; Finance; Network &amp; Policy.</li><li><strong>Community-led Emergency Preparedness</strong> — Health &amp; Share Foundation. Thailand. Stage: Build. Areas of work: Frontline &amp; Communities.</li></ul><p>Connections in this cluster:</p><ul><li>Pai Regenerative Network and Navigating Emotions (in Regenerative Landscapes): Learning Journey.</li><li>Navigating Emotions and Digital Skills &amp; Youth Agency: Referral Network.</li><li>Digital Skills &amp; Youth Agency and Undifferent: Referral Network.</li><li>Navigating Emotions and Undifferent: Referral Network.</li></ul></section><p><a href="../">Read the ECCA Annual Report 2025</a></p></div>
+<script type="module">
+
+import define from "./option2.js";
+import {Runtime, Library, Inspector} from "./runtime.js";
+
+const runtime = new Runtime();
+
+// Only the map diagram (the 2nd cell the notebook defines) should render
+// visibly — the title, the raw font-loader debug output, and the demo
+// paragraph shouldn't show up. Every cell still needs a real Inspector
+// though, or the runtime treats it as unreachable and never computes it
+// at all — which would silently stop the Contee font from loading. So
+// non-diagram cells get a real Inspector too, just pointed at a
+// display:none container instead of the visible page.
+const hiddenRoot = document.createElement("div");
+hiddenRoot.style.display = "none";
+document.body.appendChild(hiddenRoot);
+
+const DIAGRAM_CELL_INDEX = 1; // 0 = title, 1 = diagram, 2+ = link/style/font cells
+let cellIndex = 0;
+function observer() {
+  const container = cellIndex++ === DIAGRAM_CELL_INDEX ? document.body : hiddenRoot;
+  return Inspector.into(container)();
+}
+
+const main = runtime.module(define, observer);
+
+</script>
