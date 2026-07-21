@@ -43,7 +43,13 @@ async function _2(FileAttachment,d3)
   }
   const storedSettings = loadStoredSettings();
   const settings = Object.assign({
-    bandwidth: 110,
+    // Tighter on a phone. 110 is tuned for the desktop map, where the wash is a
+    // soft backdrop behind a spread-out cluster; on a phone it smears into four
+    // overlapping discs far larger than the nodes they come from (~624 units
+    // across vs ~377 for the panels), which is both muddy to look at and what
+    // was dragging the chooser's zoom-to-fit down. 40 keeps it hugging its own
+    // quadrant. Desktop is untouched.
+    bandwidth: isSmallScreen() ? 40 : 110,
     thresholds: 4,
     crossLabelMaxChars: 18,
     nodeLabelMaxChars: 18,
@@ -109,8 +115,19 @@ async function _2(FileAttachment,d3)
   // full-bleed) canvas — see the initial zoom transform near the bottom.
   const viewportW = Math.max(320, window.innerWidth || 1260);
   const viewportH = Math.max(320, window.innerHeight || 1260);
-  const contentW = viewportW * (settings.maxContentWPct / 100);
-  const contentH = viewportH * (settings.maxContentHPct / 100);
+  // The map's own size, which is NOT the screen size on a phone. Deriving the
+  // layout from a 375px viewport gave each quadrant a 139px sliver: the arcs
+  // came out tiny, the nodes had no room to spread, and zooming into one blew
+  // its labels and cards up to fill the screen. So a phone builds the SAME
+  // geometry a desktop does and the reader pans/zooms around it instead —
+  // everything keeps its designed proportions and only the window onto it is
+  // small. viewportW/H below stay the real screen, since the zoom transforms
+  // and the SVG viewBox still have to be in screen space.
+  const MOBILE_LAYOUT_W = 1280, MOBILE_LAYOUT_H = 900;
+  const layoutBaseW = isSmallScreen() ? MOBILE_LAYOUT_W : viewportW;
+  const layoutBaseH = isSmallScreen() ? MOBILE_LAYOUT_H : viewportH;
+  const contentW = layoutBaseW * (settings.maxContentWPct / 100);
+  const contentH = layoutBaseH * (settings.maxContentHPct / 100);
   const panelGapX = 60;
   const panelGapY = 60;
 
@@ -255,6 +272,11 @@ async function _2(FileAttachment,d3)
   // Reassigned when the settings panel is built; declared up here so the badge
   // drag handler (which fires long after) can call it without a TDZ hazard.
   let syncBadgePosSliders = () => {};
+  // True while the phone overview is in chooser mode (see setChooserMode).
+  // Declared here rather than next to that function because
+  // computeOverviewTransform reads it, and its first call happens earlier in
+  // this module body than soloedIndex/setChooserMode are declared.
+  let chooserActive = false;
   // Global (zoomLayer-space) bumper zone for every title badge, so a node from
   // any quadrant is kept off ALL badges — not just its own panel's. Each panel
   // pushes its entry and keeps it current (badges are draggable) in render().
@@ -1025,8 +1047,15 @@ async function _2(FileAttachment,d3)
     // the same height but at noticeably different internal scales, which reads
     // as mismatched text sizes. The text is knocked out of a compound path in
     // those SVGs, so there is nothing measurable to normalise against here.
-    let badgeUserScale = (badgeArtL ? settings[`badgeSize${badgeArtL}`] : undefined)
-      ?? badgeCfg.badgeSize ?? 1;
+    // Same reasoning as MOBILE_NODE_SCALE: the badge is sized for a desktop
+    // viewport, and reads as oversized through a phone-sized window onto the
+    // same geometry. Kept as a separate multiplier so the designer's tuned
+    // badgeSize still means the same thing on both.
+    const MOBILE_BADGE_SCALE = isSmallScreen() ? 0.6 : 1;
+    // How much the badge grows while it is the chooser's tap target.
+    const CHOOSER_BADGE_SCALE = 4;
+    let badgeUserScale = ((badgeArtL ? settings[`badgeSize${badgeArtL}`] : undefined)
+      ?? badgeCfg.badgeSize ?? 1) * MOBILE_BADGE_SCALE;
 
     // Badge renders here, before `inner` — so nodes/lines paint on top of
     // it wherever they overlap. Still draggable from any part of the badge
@@ -1198,7 +1227,11 @@ async function _2(FileAttachment,d3)
         // arc's rotation centre, as a fraction of the quadrant's own w/h.
         // Task 2.5's live sliders (settings.o2scale<L>/o2ox<L>/o2oy<L>) win
         // over the SUBZONE_ART defaults when the designer has tuned them.
-        const themeScale = settings[`o2scale${artL}`] ?? o2cfg.scale ?? 1;
+        // The trailing multiplier is the same phone adjustment the badge and
+        // node icons get: same geometry, smaller window onto it, so the
+        // artwork reads bigger than it should next to the labels.
+        const themeScale = (settings[`o2scale${artL}`] ?? o2cfg.scale ?? 1)
+          * (isSmallScreen() ? 0.8 : 1);
         flipX = settings[`o2fx${artL}`] ?? o2cfg.flipX ?? false;
         flipY = settings[`o2fy${artL}`] ?? o2cfg.flipY ?? false;
         imgCenterX = gcx + (settings[`o2ox${artL}`] ?? o2cfg.ox ?? 0) * layout.panelW;
@@ -1698,7 +1731,18 @@ async function _2(FileAttachment,d3)
       .attr("dominant-baseline", "middle")
       .text(d => d.label || "");
 
-    const nodeSize = d => hasCard(d) ? 42 : sharedIds.has(d.id) ? 28 : 22;
+    // Mobile chooser: the phone overview shows only badges + node icons, so a
+    // quadrant reads as something to tap rather than something to decipher.
+    let chooserMode = false;
+    // Icons are sized for a desktop viewport. A phone views the same geometry
+    // through a much smaller window, so they come out oversized relative to the
+    // labels beside them — trim them. Applied inside nodeSize because render()
+    // positions each icon from the same function (x = d.x - nodeSize/2), so
+    // scaling only width/height would leave every icon off-centre by half the
+    // difference.
+    const MOBILE_NODE_SCALE = isSmallScreen() ? 0.6 : 1;
+    const nodeSize = d => (hasCard(d) ? 42 : sharedIds.has(d.id) ? 28 : 22)
+      * MOBILE_NODE_SCALE;
 
     const node = nodeLayer
       .selectAll("image.node-icon")
@@ -1943,8 +1987,19 @@ async function _2(FileAttachment,d3)
       badgeZone.halfH = (badgeH / 2) * badgeUserScale;
 
       // Scale about the badge centre so it grows in place when soloed.
+      //
+      // In the phone chooser the badge IS the interface — there is nothing else
+      // to read at that zoom — so it moves to the middle of its quadrant and
+      // grows, then returns to its tuned corner spot at its normal size the
+      // moment a theme is opened. Only the drawing moves: badgeZone (the node
+      // keep-out) deliberately stays on the real position, so the node layout
+      // does not reflow between the chooser and the view you tap into.
+      const bx = chooserMode ? layout.panelW / 2 : titleState.x;
+      const by = chooserMode ? layout.panelH / 2 : titleState.y;
+      const bScale = soloBadgeScale * badgeUserScale
+        * (chooserMode ? CHOOSER_BADGE_SCALE : 1);
       titleBadge.attr("transform",
-        `translate(${titleState.x},${titleState.y}) scale(${soloBadgeScale * badgeUserScale}) translate(${-badgeW / 2},${-badgeH / 2})`);
+        `translate(${bx},${by}) scale(${bScale}) translate(${-badgeW / 2},${-badgeH / 2})`);
 
       // Bent connector from the badge (global coords) to the closest edge of
       // the nearest sub-zone blob. Cubic with vertical tangents, matching the
@@ -2165,7 +2220,8 @@ async function _2(FileAttachment,d3)
       index,
       root: panel,
       detailGroup,
-      nodeLayer, // for detailFitTransform's small-screen bbox, see below
+      nodeLayer,  // for detailFitTransform's small-screen bbox, see below
+      titleLayer, // same — the badge has to be inside the frame it pans to
       // Getters (not plain values) — Task 2.5's arc-tune sliders call
       // retuneArc() below, which re-runs renderDetail() and reassigns the
       // OUTER detailCenter/detailExtent/detailControls variables; a plain
@@ -2189,7 +2245,19 @@ async function _2(FileAttachment,d3)
       // (e.g. the badge-to-blob connector) reflects the new geometry too.
       retuneArc() { renderDetail(); render(); },
       badgeLetter: badgeArtL,
-      setBadgeScale2(v) { badgeUserScale = v; render(); },
+      // Chooser mode hides this panel's node labels and shrinks its icons; the
+      // badge stays untouched (it is the tap target). Re-applies width/height
+      // because those are set once at join, then re-renders so the positions
+      // follow the new size.
+      setChooserMode(on) {
+        chooserMode = on;
+        node.attr("width", d => nodeSize(d)).attr("height", d => nodeSize(d));
+        labelGroupsNode.attr("display", d => (hasCard(d) && !on) ? null : "none");
+        render();
+      },
+      // v is the designer's tuned badgeSize; re-apply the phone multiplier so
+      // dragging the slider does not silently drop it.
+      setBadgeScale2(v) { badgeUserScale = v * MOBILE_BADGE_SCALE; render(); },
       // Slider-driven twin of the drag gesture — same badgeOverride, clamped
       // the same way so the badge can never be parked outside its panel.
       setBadgePos(fx, fy) {
@@ -2692,7 +2760,15 @@ async function _2(FileAttachment,d3)
   // the whole map. So on small screens fit to what is actually drawn, rather
   // than to a content box the drawing does not respect.
   const OVERVIEW_FIT_PAD = 10;
-  const DETAIL_FIT_PAD = 8;
+  // Breathing room around a soloed quadrant. Generous because the fit is
+  // measured from bboxes that do not know about the fixed chrome sitting on
+  // top (the header bubble, the "Overview" pill, the legend character) — at a
+  // tight pad the badge ends up flush against the edge or a few px behind it.
+  const DETAIL_FIT_PAD = 28;
+  // The scale the desktop map sits at. Phones reuse it when panning to a
+  // soloed quadrant, so the artwork, labels and cards there are exactly the
+  // size they were designed at rather than being fitted to a small screen.
+  const DESKTOP_SCALE = 0.92;
   // getBBox() over `sel`, with anything matching `hideSel` dropped from the
   // measurement. display:none is what removes an element from getBBox —
   // opacity:0 does not, so invisible-but-laid-out things still count. Returns
@@ -2728,7 +2804,15 @@ async function _2(FileAttachment,d3)
     // the sub-zone hover cards/labels — all invisible at rest (opacity:0,
     // not display:none) but still laid out, so they'd otherwise inflate the
     // measurement.
-    return measuredBBox(zoomLayer, ".node-card, .detail-node-card, .node-label-fo");
+    // The density wash spreads a long way past the nodes it is drawn from
+    // (624x613 units vs ~377 for the panels themselves), so in chooser mode —
+    // where it is the only thing left besides badges and icons — it would drag
+    // the fit down to ~0.57 and leave the badges too small to tap. It is
+    // background texture and already bleeds off-screen on desktop, so drop it
+    // from the measurement there and let it crop.
+    const hide = ".node-card, .detail-node-card, .node-label-fo"
+      + (chooserActive ? ", .density-root" : "");
+    return measuredBBox(zoomLayer, hide);
   }
 
   function computeOverviewTransform() {
@@ -2739,13 +2823,18 @@ async function _2(FileAttachment,d3)
     // that reliably shows all four is one measured from what is actually drawn.
     const bb = overviewBBox();
     const pad = settings.overviewFitPad ?? OVERVIEW_FIT_PAD;
+    // 0.92 keeps the full map slightly clear of the edges. The chooser has no
+    // arcs and no labels, so its extent is much smaller — capping it at 0.92
+    // would leave it as a small clump in the middle of the phone screen with
+    // badges too small to tap. Let that one scale up to fill instead.
+    const maxK = chooserActive ? 3 : DESKTOP_SCALE;
     const k = bb
       ? Math.min(
-          0.92,
+          maxK,
           (viewportW - pad * 2) / bb.width,
           (viewportH - pad * 2) / bb.height
         )
-      : 0.92;
+      : DESKTOP_SCALE;
     // Pinching out to (a little past) the fitted view has to stay reachable;
     // with no fit (desktop) this re-asserts the original 0.6 floor.
     zoom.scaleExtent([Math.min(0.6, k * 0.85), 3]);
@@ -2801,10 +2890,33 @@ async function _2(FileAttachment,d3)
   let showTune = () => {}; // assigned when the settings panel is built
 
   // The detail maps used to sit outside the master view, kept out of sight
-  // purely by being parked off-screen — hidden outright below a certain
-  // small-screen zoom that would otherwise have dragged them into frame.
-  // They now live inside their own quadrant and are meant to be visible from
-  // the rest state, so there is no gating left to do here.
+  // purely by being parked off-screen. They now live inside their own quadrant
+  // and are visible from the rest state — on desktop.
+  //
+  // On a phone a quadrant is only ~139px wide, which is not enough for an arc,
+  // its sub-zone labels, 8-11 nodes and their labels all at once; showing them
+  // together just produced overlapping text. So the phone overview becomes a
+  // CHOOSER: four badges over shrunken, unlabelled node icons and nothing else.
+  // Tapping a badge zooms that quadrant and restores the full desktop-style
+  // view for it; leaving goes back to the chooser. Desktop never enters this
+  // mode, so it is unaffected.
+  function setChooserMode(on) {
+    chooserActive = on;
+    detailLayer.style("display", on ? "none" : null);
+    linkOverlay.style("display", on ? "none" : null);
+    crossLabelLayer.style("display", on ? "none" : null);
+    hubLayer.style("display", on ? "none" : null);
+    panels.forEach(p => p.setChooserMode && p.setChooserMode(on));
+  }
+  // Whether the phone should be in chooser mode right now: only when nothing
+  // is soloed. Called on load, and on every solo/exit.
+  function syncChooserMode() {
+    setChooserMode(isSmallScreen() && soloedIndex === null);
+  }
+  // Apply on load. The deferred refits scheduled above (rAF + timeout) run
+  // after this module body finishes, so they measure the chooser's own extent
+  // rather than the full arcs it has just hidden.
+  syncChooserMode();
 
   // Fit transform that pans + zooms to a theme's detail map (which lives
   // in its own quadrant, see makePanel).
@@ -2817,22 +2929,40 @@ async function _2(FileAttachment,d3)
     // and their labels in frame; on a ~390px phone it shoves them off both
     // edges. So on small screens fit the whole drawn detail map instead.
     if (isSmallScreen() && p.detailGroup) {
-      // Measure the artwork + node icons, but NOT the labels: letting the label
-      // extents drive the fit is what shrank the blobs so much. Labels are small
-      // (6px) and may now overhang the edges slightly, which is the trade for
-      // keeping the sub-zone artwork large.
-      // Task 2: node icons no longer live inside detailGroup — they're the
-      // single master set (in the panel's own nodeLayer), not a "detail" copy
-      // — so union the artwork's box with the node layer's own to keep both
-      // in frame when soloing a theme on a phone.
+      // Do NOT fit the quadrant to the phone screen. The map is now built at
+      // desktop geometry (see MOBILE_LAYOUT_W), so squeezing a whole quadrant
+      // into 375px would shrink everything below its designed size — and
+      // fitting it the other way round is what previously blew the labels and
+      // cards up. Instead hold the desktop scale and just pan to the quadrant,
+      // leaving the reader to explore the rest of the map by dragging.
+      // getBBox() reports an element's OWN user space and ignores ancestor
+      // transforms. detailGroup hangs off detailLayer, which has none, so its
+      // box is already global — but nodeLayer sits inside the panel's
+      // translate(x,y), so its box is panel-local and has to be shifted before
+      // the two can be unioned. Skipping this offset the centring by the
+      // panel's own position: 0 for the top-left quadrant (which looked fine)
+      // but 606px for the right column, which is why Cultural Narratives and
+      // Inclusive Communities landed off-screen.
+      const toGlobal = (b) => b
+        ? { x: b.x + p.x0, y: b.y + p.y0, width: b.width, height: b.height }
+        : null;
       const artBB = measuredBBox(p.detailGroup, ".detail-node-card, .node-label-fo");
-      const nodesBB = p.nodeLayer ? measuredBBox(p.nodeLayer, ".__unused__") : null;
-      const bb = unionBBox(artBB, nodesBB);
+      const nodesBB = toGlobal(p.nodeLayer ? measuredBBox(p.nodeLayer, ".__unused__") : null);
+      // The badge lives in titleLayer, also panel-local. Include it or the pan
+      // can centre on the artwork with the badge left outside the frame — which
+      // is exactly what happened to Healthy Oceans.
+      const badgeBB = toGlobal(p.titleLayer ? measuredBBox(p.titleLayer, ".__unused__") : null);
+      const bb = unionBBox(unionBBox(artBB, nodesBB), badgeBB);
       if (bb) {
-        const k = Math.max(0.2, Math.min(3, Math.min(
+        // Never zoom IN past the desktop scale (that is what made everything
+        // look oversized), but do zoom OUT when the quadrant plus its badge
+        // does not fit the phone — better a slightly smaller view than one with
+        // the badge or half the arc cropped off.
+        const k = Math.min(
+          DESKTOP_SCALE,
           (viewportW - DETAIL_FIT_PAD * 2) / bb.width,
           (viewportH - DETAIL_FIT_PAD * 2) / bb.height
-        )));
+        );
         return d3.zoomIdentity
           .translate(
             viewportW / 2 - k * (bb.x + bb.width / 2),
@@ -2854,21 +2984,41 @@ async function _2(FileAttachment,d3)
   // and the detail maps stay at full opacity the whole time.
   function soloPanel(index) {
     soloedIndex = index;
+    // Restore the full view BEFORE measuring the fit — detailFitTransform sizes
+    // itself from the artwork's bbox, which reads as empty while it is hidden.
+    syncChooserMode();
     svg.transition().duration(750).call(zoom.transform, detailFitTransform(index));
     panels.forEach((p, i) => {
       p.setBadgeScale(i === index ? 1.5 : 1);
-      p.setFocus(i === index ? "focused" : "dim");
+      // Phones do not dim the other three. There the map is bigger than the
+      // screen and tapping a badge only pans to that quadrant, so the reader is
+      // expected to keep dragging around the whole map — dimming everything
+      // they are about to pan into would work against that. On desktop the
+      // whole map is already in view, so dimming still reads as focus.
+      p.setFocus(isSmallScreen() ? "off" : (i === index ? "focused" : "dim"));
     });
     setChrome(charts[index].id);
     showTune(panels[index]);
+    // On a phone the how-to blob is onboarding for the chooser. Once a theme has
+    // been opened the reader has clearly worked out the interaction, and the
+    // bubble is just fixed chrome covering a map they now have to pan around —
+    // so drop it for good. Nothing re-reveals it: setChrome only re-opens the
+    // legend, and only on desktop.
+    if (isSmallScreen()) exploreBubble.classed("collapsed", true);
   }
 
   function exitSolo() {
     soloedIndex = null;
-    svg.transition().duration(750).call(zoom.transform, overviewTransform);
     panels.forEach(p => { p.setBadgeScale(1); p.setFocus("off"); });
     setChrome("master");
     showTune(null);
+    // Back to the chooser on a phone, then re-fit: the overview transform was
+    // measured with the arcs showing, which is the wrong extent for a chooser
+    // that has none.
+    syncChooserMode();
+    userHasZoomed = false;
+    overviewTransform = computeOverviewTransform();
+    svg.transition().duration(750).call(zoom.transform, overviewTransform);
   }
 
   d3.select(window).on("keydown.solo", (event) => {
@@ -2999,18 +3149,30 @@ async function _2(FileAttachment,d3)
          space-between — the legend starts collapsed (display:none) here, and
          space-between parks a lone remaining item at the START, which threw the
          man to the left edge. auto margin pins him right either way. */
-      .ecca-legend-row { flex-direction: row; align-items: flex-end; gap: 6px;
+      .ecca-legend-row { flex-direction: row; align-items: flex-end; gap: 0;
         width: 100%; }
       .ecca-char-wrap { margin-left: auto; }
       .ecca-character { height: 96px; display: block; }
       .ecca-legend-desktop { display: none; }
-      .ecca-legend-mobile { display: block; width: 58vw; max-width: 250px; }
+      /* Wider than its own box on purpose (and uncapped) so the legend art
+         fills the row now that gap:0 has closed the space beside the character. */
+      .ecca-legend-mobile { display: block; width: 105%; max-width: none; }
       .ecca-legend { margin-bottom: 16px; }
-      .ecca-header-img { width: 225px; max-width: 46vw; }
+      /* Kill the hover grow on a phone. It is a mouse affordance, and a tap
+         leaves :hover stuck on — so the legend sat permanently scaled. With
+         transform-origin at bottom right it grows LEFTWARD, and the panel
+         already starts near the left edge, so the extra 15% ran straight off
+         the screen. */
+      .ecca-legend:hover { transform: none; }
+      /* Both speech bubbles at 0.84x of their old phone size (0.7 then nudged
+         back up by 1.2): they are fixed chrome sitting over a map you now pan
+         around, so the less of it they cover the better — but at a flat 0.7 the
+         copy inside got hard to read. 46vw -> 38.6vw, 40vw -> 33.6vw. */
+      .ecca-header-img { width: 190px; max-width: 38.6vw; }
       /* Smaller, and lifted clear of the toggle tip below it. The tip is
          absolutely positioned (out of flow), so the column reserves no room for
          it — this margin is what stops the bubble landing on top of it. */
-      .ecca-explore-img { width: 260px; max-width: 40vw; }
+      .ecca-explore-img { width: 218px; max-width: 33.6vw; }
       /* flush right, above the toggle tip (which is out of flow, so this margin
          is what stops the bubble landing on top of it). */
       .ecca-explore { margin-bottom: 30px; margin-right: 0; align-self: flex-end; }
@@ -3043,13 +3205,23 @@ async function _2(FileAttachment,d3)
 
   // Per-view character illustration (the SVGs you exported). Doubles as the
   // legend toggle — clicking the character hides/shows the legend panel.
-  const CHARACTERS = {
+  // Phones get their own set (characters/legend-mb) — the desktop art is drawn
+  // to sit beside a wide legend panel and reads badly at phone size.
+  const CHARACTERS_DESKTOP = {
     master: "./characters/master.svg",
     "Healthy Oceans": "./characters/entrypoint-a.svg",
     "Regenerative Landscapes": "./characters/entrypoint-b.svg",
     "Inclusive Communities": "./characters/entrypoint-c.svg",
     "Cultural Narratives": "./characters/entrypoint-d.svg"
   };
+  const CHARACTERS_MOBILE = {
+    master: "./characters/legend-mb/master-man-mb.svg",
+    "Healthy Oceans": "./characters/legend-mb/ocean-man-mb.svg",
+    "Regenerative Landscapes": "./characters/legend-mb/regen-woman-mb.svg",
+    "Inclusive Communities": "./characters/legend-mb/commu-woman-mb.svg",
+    "Cultural Narratives": "./characters/legend-mb/cult-man-mb.svg"
+  };
+  const CHARACTERS = isSmallScreen() ? CHARACTERS_MOBILE : CHARACTERS_DESKTOP;
 
   // ECCA brand palette (from the project swatch sheet).
   const PAL = {
