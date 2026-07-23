@@ -685,7 +685,7 @@ async function _2(FileAttachment,d3)
                       line-height:1;
                       color:${chart.color};
                       white-space:nowrap;
-                    ">View project ↗</div>`
+                    ">View project <svg style="padding-left: 0.5ch;" width="5" height="5" viewBox="0 0 5 5" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M0.675 0.63V0H4.86V4.203H4.239V1.053L0.414 4.869L0 4.455L3.825 0.63H0.675Z" fill="currentColor"/></svg></div>`
                   : ``}
               </div>`
             : ``
@@ -1148,6 +1148,10 @@ async function _2(FileAttachment,d3)
     let zoneLinkSel = null;
     let zoneConnPath = null;
     let arcAvoidZones = [];
+    // Sub-zone headline labels + the node->sub-zone connection map, published
+    // for setEmphasis so it can dim the sub-zones a focused node isn't tied to.
+    let zoneLabelSel = null;
+    let zoneConns = null;
     const detailGroup = detailLayer.append("g")
       .attr("class", "detail-map")
       .style("opacity", 1);
@@ -1406,6 +1410,7 @@ async function _2(FileAttachment,d3)
       // read — see the `let zoneLinkSel`/`zoneConnPath` declared above.
       zoneLinkSel = linkSel;
       zoneConnPath = connPath;
+      zoneConns = conns;
 
       // Per-zone label nudge, applied ONLY to the hover layout: at rest the
       // headline must stay centred in its blob, so the offset eases in on hover
@@ -1446,7 +1451,10 @@ async function _2(FileAttachment,d3)
           if (cfg.head) {
             // The nudge lives on the label group, but is only applied while
             // hovered — rest keeps translate(0,0) so the headline stays centred.
-            const labelG = detailGroup.append("g").style("pointer-events", "none")
+            const labelG = detailGroup.append("g")
+              .attr("class", "subzone-label-art")
+              .datum(za)
+              .style("pointer-events", "none")
               .attr("transform", "translate(0,0)");
             const nudge = { x: 0, y: 0, hovered: false };
             const setNudge = (dxf, dyf) => {
@@ -1506,13 +1514,34 @@ async function _2(FileAttachment,d3)
               if (bodyImg) bodyImg.interrupt().transition().duration(180).style("opacity", 0);
             };
           }
+          // Hovering a sub-zone dims every OTHER sub-zone label (this one stays
+          // bright), the same focus cue a node gets. Selects from the root svg,
+          // NOT the closure's detailGroup: renderDetail can re-run (retuneArc)
+          // and leave this closure holding a stale, detached detailGroup whose
+          // selectAll finds nothing — the svg root never goes stale. Sub-zone
+          // names are unique across all four themes, so matching by name also
+          // dims other themes' labels, matching a focused node's reach.
+          // Opacity is a plain inline set that .subzone-label-art's CSS
+          // transition animates (a d3 named transition proved unreliable here).
+          const dimOthers = () => {
+            svg.selectAll("g.subzone-label-art")
+              .style("opacity", z => (z && z.name === za.name) ? 1 : DIM_ZONE_LABEL);
+          };
+          const undimAll = () => {
+            svg.selectAll("g.subzone-label-art").style("opacity", 1);
+          };
           detailGroup.append("circle")
             .attr("cx", za.x).attr("cy", za.y).attr("r", za.r)
             .attr("fill", "transparent").style("pointer-events", "auto").style("cursor", "pointer")
-            .on("mouseenter", () => { linkSel.attr("stroke-opacity", l => l.target === za ? 0.95 : 0.1); onEnter(); })
-            .on("mouseleave", () => { linkSel.attr("stroke-opacity", 0.5); onLeave(); });
+            .on("mouseenter", () => { linkSel.attr("stroke-opacity", l => l.target === za ? 0.95 : 0.1); dimOthers(); onEnter(); })
+            .on("mouseleave", () => { linkSel.attr("stroke-opacity", 0.5); undimAll(); onLeave(); });
         });
       }
+
+      // Published now the label groups exist (created in the loop above).
+      // Selecting rather than array-collecting so a retuneArc re-render, which
+      // rebuilds these groups, is picked up by the next setEmphasis read.
+      zoneLabelSel = detailGroup.selectAll("g.subzone-label-art");
 
       // Tiny dot marking each sub-zone's pin (attach) point, where its
       // connectors terminate. Moves live when the attach point is tuned.
@@ -1805,6 +1834,11 @@ async function _2(FileAttachment,d3)
     // focused node). Kept in one place so a running simulation's tick and an
     // emphasis transition write the same transform string instead of fighting.
     const NEIGHBOR_LABEL_SCALE = 1.5;
+    // Faded stroke-opacity for the node->sub-zone connectors that don't belong
+    // to the focused node (their normal opacity is 0.5).
+    const DIM_ZONE_LINK = 0.08;
+    // Faded opacity for sub-zone headline labels a focused node isn't tied to.
+    const DIM_ZONE_LABEL = 0.15;
     function labelTransform(d) {
       return `translate(${d.x},${d.y - nodeSize(d) / 2 - 5}) scale(${d.__labelScale ?? 1})`;
     }
@@ -1847,14 +1881,21 @@ async function _2(FileAttachment,d3)
     // small panel. Accepts an optional actual-height override so a card
     // that's been individually measured (see measureCardHeights below)
     // clamps against its own real size instead of the generic estimate.
+    // These two themes place the card to the RIGHT of the node instead of the
+    // left (their arcs/labels sit to the node's left, so a left card collides).
+    const CARD_RIGHT = chart.id === "Regenerative Landscapes" || chart.id === "Healthy Oceans";
     function clampedCardPos(d, hOverride) {
       const h = hOverride ?? card.h;
       // Cards are auto-width (fit-content, capped at card.w) and get their
       // real width measured into d.__cardW below; fall back to card.w before
       // that first measurement.
       const w = d.__cardW ?? card.w;
+      // Right-side placement mirrors the card across the node: the same node-to-
+      // card gap, on the other side. card.offsetX is negative (left), so
+      // -offsetX - w lands the card's left edge symmetrically to the right.
+      const offX = CARD_RIGHT ? (-card.offsetX - w) : card.offsetX;
       return {
-        x: Math.max(-x, Math.min(d.x + card.offsetX, layout.width - x - w)),
+        x: Math.max(-x, Math.min(d.x + offX, layout.width - x - w)),
         y: Math.max(-y, Math.min(d.y + card.offsetY, layout.height - y - h))
       };
     }
@@ -2117,6 +2158,16 @@ async function _2(FileAttachment,d3)
         // doesn't change what's pinned. Cancel any pending hide so moving
         // between nodes (or from the card back to a node) doesn't clear.
         cancelClear();
+        // Moving straight from one node to another cancels the pending clear
+        // above, so the node we are leaving never gets cleaned up and its
+        // cross-link labels linger. Fade them now before showing the new node —
+        // but not the pinned node's, whose neighbourhood should persist.
+        // setNodeCrossLinksVisible already leaves click-pinned links alone.
+        const prevHoverId = hoverFocus && hoverFocus.nodeId;
+        if (prevHoverId != null && prevHoverId !== d.id
+            && !(pinned && pinned.nodeId === prevHoverId)) {
+          setNodeCrossLinksVisible(prevHoverId, null, false);
+        }
         hoverFocus = {chartId: chart.id, nodeId: d.id, getPos: () => ({x: x + d.x, y: y + d.y})};
         focusVisual(chart.id, d.id, {x: x + d.x, y: y + d.y});
       })
@@ -2139,14 +2190,16 @@ async function _2(FileAttachment,d3)
           pinned = null;
           clearVisual(prev);
         } else {
-          const prevId = pinned && pinned.nodeId;
           pinned = {
             key,
             chartId: chart.id,
             nodeId: d.id,
             getPos: () => ({x: x + d.x, y: y + d.y})
           };
-          if (prevId != null && prevId !== d.id) setNodeCrossLinksVisible(prevId, null, false);
+          // Reset every other node's card + connections first, so clicking a
+          // new node cannot leave a stale card or line from a previous focus
+          // (or from hovering across nodes on the way there).
+          resetNodeVisuals();
           focusVisual(chart.id, d.id, {x: x + d.x, y: y + d.y});
         }
       });
@@ -2189,6 +2242,28 @@ async function _2(FileAttachment,d3)
           .attr("font-weight", (isNbr && !isFocus) ? 700 : 500);
       });
 
+      // Dotted node -> sub-zone connectors: keep the focused node's own bright,
+      // fade everyone else's (in every panel, since the focused node may live
+      // in another one). zoneLinkSel is read live via closure, so it tracks the
+      // current selection after a retuneArc re-render.
+      if (zoneLinkSel) {
+        zoneLinkSel.interrupt().transition().duration(160)
+          .attr("stroke-opacity", l => keyOf(l.source) === focusKey ? 0.5 : DIM_ZONE_LINK);
+      }
+
+      // Dim the sub-zone headline labels the focused node isn't connected to.
+      // A node only links to sub-zones in its own theme, so a focus in another
+      // panel dims every label here. Named transition ("dimlabel") so it never
+      // interrupts the head/body reveal that runs on labelG's default timeline.
+      if (zoneLabelSel) {
+        const prefix = chart.id + "::";
+        const focusNodeHere = focusKey.startsWith(prefix) ? focusKey.slice(prefix.length) : null;
+        const related = new Set((focusNodeHere && zoneConns && zoneConns[focusNodeHere]) || []);
+        // Inline opacity (CSS animates it, see .subzone-label-art) — matches the
+        // sub-zone hover path so the two can't fight over the same property.
+        zoneLabelSel.style("opacity", za => related.has(za.name) ? 1 : DIM_ZONE_LABEL);
+      }
+
       infoCards.interrupt().transition().duration(180)
         .style("opacity", d => keyOf(d) === focusKey ? 1 : 0);
       // Only the focused card, and only if it links somewhere, accepts clicks —
@@ -2213,6 +2288,12 @@ async function _2(FileAttachment,d3)
       infoCards.interrupt().transition().duration(160).style("opacity", 0);
       infoCards.style("pointer-events", "none");
       cardLeaders.interrupt().transition().duration(160).attr("stroke-opacity", 0);
+      if (zoneLinkSel) {
+        zoneLinkSel.interrupt().transition().duration(160).attr("stroke-opacity", 0.5);
+      }
+      if (zoneLabelSel) {
+        zoneLabelSel.style("opacity", 1);
+      }
     }
 
     return {
@@ -2358,6 +2439,11 @@ async function _2(FileAttachment,d3)
     const nbrKeys = relatedCrossNodeKeys(chartId, nodeId); // includes focusKey
     panels.forEach(panel => panel.setEmphasis(focusKey, nbrKeys));
 
+    // Swap the top-left bubble + legend character to this node's entry point,
+    // so focusing a node reads as being "in" its theme. setChrome no-ops if the
+    // chrome is already that theme, so this is cheap on every hover/drag tick.
+    setChrome(chartId);
+
     setNodeCrossLinksVisible(nodeId, canvasPos, true);
     linkOverlay.selectAll("g.cross-link").each(function(d) {
       const active = d.sourceNode === nodeId || d.targetNode === nodeId;
@@ -2369,6 +2455,24 @@ async function _2(FileAttachment,d3)
     panels.forEach(panel => panel.clearEmphasis());
     if (prevNodeId != null) setNodeCrossLinksVisible(prevNodeId, null, false);
     linkOverlay.selectAll("g.cross-link").attr("opacity", 1);
+    // Restore whatever chrome was showing before the node focus overrode it.
+    setChrome(baseChrome);
+  }
+
+  // Hard reset of every transient node visual, used when a NEW node is clicked
+  // so nothing from a previous focus lingers. clearVisual only unwinds one
+  // known previous node; hovering across several nodes first can leave each of
+  // their cross-links marked visible in hoveredCrossLinkKeys (a mouseleave
+  // schedules the clear, the next mouseenter cancels it, so it never runs).
+  // This clears all of them at once — including link-pins (pinnedCrossLinks,
+  // from clicking a link directly) — plus any pending hide timer, then fades
+  // every cross-link. Cards are handled by the focusVisual() that follows.
+  function resetNodeVisuals() {
+    cancelClear();
+    hoverFocus = null;
+    hoveredCrossLinkKeys.clear();
+    pinnedCrossLinks.clear();
+    setCrossLinkVisible(linkOverlay.selectAll("g.cross-link"), false);
   }
 
   function updateCrossLinks() {
@@ -2710,6 +2814,12 @@ async function _2(FileAttachment,d3)
   // own root BELOW the artwork rather than a child of each panel.
   const densityRoot = zoomLayer.append("g").attr("class", "density-root");
   const detailLayer = zoomLayer.append("g").attr("class", "detail-maps");
+  // Cross-link labels sit ABOVE the artwork but BELOW the panels, so a focused
+  // node's info card (in its panel) paints on top of them instead of being
+  // covered by a "Partner with"/"Invested for" label. Created before the panel
+  // loop for that stacking; still assigned to the outer `let crossLabelLayer`
+  // so updateCrossLinks etc. reach it.
+  crossLabelLayer = zoomLayer.append("g").attr("pointer-events", "none");
 
   charts.forEach((chart, index) => {
     panels.push(makePanel(chart, index));
@@ -2734,8 +2844,6 @@ async function _2(FileAttachment,d3)
     requestCrossLinksUpdate();
     saveSettings();
   }
-
-  crossLabelLayer = zoomLayer.append("g").attr("pointer-events", "none");
 
   renderHubs();
   updateCrossLinks();
@@ -2887,6 +2995,10 @@ async function _2(FileAttachment,d3)
   // the richer per-theme detail maps (in Figma) are a later phase.
   let soloedIndex = null;
   let currentChrome = null; // which theme (or "master") the header/legend show
+  // The "resting" chrome to fall back to when a transient node focus clears —
+  // set by everything that establishes a lasting view (init, solo/exit, pan),
+  // but NOT by a node hover/click, which only overrides the chrome temporarily.
+  let baseChrome = "master";
   let showTune = () => {}; // assigned when the settings panel is built
 
   // The detail maps used to sit outside the master view, kept out of sight
@@ -2997,7 +3109,7 @@ async function _2(FileAttachment,d3)
       // whole map is already in view, so dimming still reads as focus.
       p.setFocus(isSmallScreen() ? "off" : (i === index ? "focused" : "dim"));
     });
-    setChrome(charts[index].id);
+    setBaseChrome(charts[index].id);
     showTune(panels[index]);
     // On a phone the how-to blob is onboarding for the chooser. Once a theme has
     // been opened the reader has clearly worked out the interaction, and the
@@ -3010,7 +3122,7 @@ async function _2(FileAttachment,d3)
   function exitSolo() {
     soloedIndex = null;
     panels.forEach(p => { p.setBadgeScale(1); p.setFocus("off"); });
-    setChrome("master");
+    setBaseChrome("master");
     showTune(null);
     // Back to the chooser on a phone, then re-fit: the overview transform was
     // measured with the arcs showing, which is the wrong extent for a chooser
@@ -3050,6 +3162,11 @@ async function _2(FileAttachment,d3)
 
     /* Placeholder sub-zone blob labels (in-SVG foreignObjects). */
     .subzone-label { font-family: poppins, system-ui, sans-serif; color: #2c3a22; text-align: center; pointer-events: none; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding: 0 12%; box-sizing: border-box; }
+    /* Sub-zone headline groups dim via a plain inline opacity set (node focus and
+       sub-zone hover both write it directly); this animates that change. Using
+       CSS rather than a d3 transition because a named d3 transition proved
+       unreliable when fired from the sub-zone hit-circle handler. */
+    .subzone-label-art { transition: opacity 0.16s ease; }
     .subzone-label .sz-name { font-weight: 700; font-size: 11px; line-height: 1.12; margin-bottom: 3px; }
     .subzone-label .sz-desc { font-size: 7.5px; line-height: 1.25; opacity: .9; }
     /* .detail-node-label removed with Task 2 — the duplicate "detail" node
@@ -3269,6 +3386,11 @@ async function _2(FileAttachment,d3)
     themeMobile:   "./characters/Mobile-Legend-EntryPoint.png"
   };
 
+  // setChrome that also records the mode as the resting chrome (see baseChrome).
+  // Used for lasting view changes; focusVisual uses plain setChrome so its swap
+  // is undone when the focus clears back to baseChrome.
+  function setBaseChrome(mode) { baseChrome = mode; setChrome(mode); }
+
   function setChrome(mode) {
     if (mode === currentChrome) return; // already showing this view's chrome
     currentChrome = mode;
@@ -3298,7 +3420,7 @@ async function _2(FileAttachment,d3)
       }
     }
   }
-  setChrome("master");
+  setBaseChrome("master");
 
   // On a phone the legend blankets a large share of a small screen, so start it
   // collapsed and let the map breathe; the character's "Click to toggle legend"
@@ -3313,7 +3435,10 @@ async function _2(FileAttachment,d3)
   // takes over the header bubble + legend (and the dev tune panel). Panning
   // back over the master in the middle restores the master chrome. Only reacts
   // to user-driven pans/zooms (programmatic transforms have a null sourceEvent).
-  function updateChromeForView(transform) {
+  // Which panel index the viewport is centred over (>=0), or -1 for none —
+  // used both by the pan-driven chrome and to revert the chrome after a node
+  // focus clears (so it falls back to whatever the current pan implies).
+  function panelIndexForView(transform) {
     const [cx, cy] = transform.invert([viewportW / 2, viewportH / 2]);
     let best = -1, bestDist = Infinity;
     panels.forEach((p, i) => {
@@ -3321,11 +3446,14 @@ async function _2(FileAttachment,d3)
       const d = Math.hypot(p.detailCenter.x - cx, p.detailCenter.y - cy);
       if (d < bestDist) { bestDist = d; best = i; }
     });
-    const focused = best >= 0 && bestDist < panels[best].detailExtent * 1.2;
-    const target = focused ? charts[best].id : "master";
+    return (best >= 0 && bestDist < panels[best].detailExtent * 1.2) ? best : -1;
+  }
+  function updateChromeForView(transform) {
+    const best = panelIndexForView(transform);
+    const target = best >= 0 ? charts[best].id : "master";
     if (target !== currentChrome) {
-      setChrome(target);
-      showTune(focused ? panels[best] : null);
+      setBaseChrome(target);
+      showTune(best >= 0 ? panels[best] : null);
     }
   }
   zoom.on("zoom.chrome", (event) => {
