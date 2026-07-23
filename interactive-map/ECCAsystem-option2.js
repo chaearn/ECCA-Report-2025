@@ -2225,6 +2225,16 @@ async function _2(FileAttachment,d3)
     // every other node dims. Cards for neighbours no longer pop.
     function setEmphasis(focusKey, nbrKeys) {
       const keyOf = d => `${chart.id}::${d.id}`;
+
+      // If this panel owns the focused node, lift the whole panel to the top of
+      // the stack so its info card can't be covered by another quadrant's
+      // nodes — the right-placed Regenerative Landscapes / Healthy Oceans cards
+      // reach into the panels drawn after them otherwise. Only raise when not
+      // already last, so repeated hover/drag ticks don't thrash the DOM.
+      if (focusKey.startsWith(chart.id + "::")) {
+        const pn = panel.node();
+        if (pn.parentNode && pn.parentNode.lastChild !== pn) panel.raise();
+      }
       node.interrupt().transition().duration(160)
         .attr("opacity", d => nbrKeys.has(keyOf(d)) ? 1 : 0.35);
 
